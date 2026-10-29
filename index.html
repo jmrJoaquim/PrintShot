@@ -136,6 +136,7 @@
     .foot .live { display: inline-flex; align-items: center; gap: 6px; }
     .foot .live i { width: 7px; height: 7px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 3px rgba(62,207,142,.15); }
     .foot .author { color: var(--text); font-weight: 550; }
+    .foot .app-version { color: var(--text-faint); font-variant-numeric: tabular-nums; }
     .zoom-btn { color: var(--text-muted); padding: 2px 6px; border-radius: 4px; font-size: 11.5px; }
     .zoom-btn:hover { background: var(--surface-3); color: var(--text); }
     .zoom-controls { display: none; align-items: center; gap: 4px; }
@@ -284,7 +285,7 @@
       <button class="btn btn-outline" id="zoomFit" title="Ajustar à tela">Ajustar</button>
     </div>
     <span class="spacer"></span>
-    <span>Criado e desenvolvido por <span class="author">Joaquim Rodrigues</span></span>
+    <span>Criado e desenvolvido por <span class="author">Joaquim Rodrigues</span> <span class="app-version" id="appVersion"></span></span>
   </footer>
 
   <div class="tooltip" id="tooltip"></div>
@@ -354,6 +355,11 @@
             <button data-mode="region">Recortar área</button>
             <button data-mode="full">Tela inteira</button>
           </div>
+        </div>
+        <div class="field update-field">
+          <label>Atualizações <span id="settingsAppVersion"></span></label>
+          <button class="btn btn-outline" id="checkUpdates">Verificar atualizações</button>
+          <small id="updateStatus" role="status">Consulte e baixe manualmente a versão mais recente.</small>
         </div>
       </div>
       <footer><button class="btn btn-ghost" data-close>Cancelar</button><button class="btn btn-primary" id="saveSettings">Salvar</button></footer>
@@ -1144,9 +1150,27 @@
       $('#shortcutLabel').textContent = label; $('#shortcutLabel2').textContent = label;
     }
     $('#btnSettings').onclick = async () => {
-      const s = api ? await api.getSettings() : { shortcut: 'PrintScreen', shortcutMode: 'region' };
+      const s = api ? await api.getSettings() : { shortcut: 'PrintScreen', shortcutMode: 'region', version: '—' };
       $('#shortcutSelect').value = s.shortcut; setModeSeg(s.shortcutMode);
+      $('#appVersion').textContent = `v${s.version}`;
+      $('#settingsAppVersion').textContent = `v${s.version}`;
       openModal('#settingsModal');
+    };
+    if (api) api.getSettings().then((s) => { $('#appVersion').textContent = `v${s.version}`; }).catch(() => {});
+    $('#checkUpdates').onclick = async () => {
+      const button = $('#checkUpdates'), status = $('#updateStatus');
+      if (!api) { status.textContent = 'A verificação está disponível na versão instalada.'; return; }
+      button.disabled = true;
+      status.textContent = 'Verificando atualizações…';
+      try {
+        const result = await api.checkForUpdates();
+        if (!result.ok) throw new Error(result.error || 'Não foi possível verificar atualizações.');
+        status.textContent = result.available
+          ? `A versão ${result.version} foi encontrada. O download começou em segundo plano.`
+          : `Você já está usando a versão mais recente (v${result.currentVersion}).`;
+      } catch (error) {
+        status.textContent = error.message || 'Não foi possível verificar atualizações.';
+      } finally { button.disabled = false; }
     };
     $('#saveSettings').onclick = async () => {
       const next = { shortcut: $('#shortcutSelect').value, shortcutMode: pendingMode };

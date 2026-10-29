@@ -18,6 +18,8 @@ let webPageWindow = null;
 let webPageController = null;
 let webPageCaptureRunning = false;
 let ocrWorkerPromise = null;
+let appUpdater = null;
+let updateCheckPromise = null;
 
 const DEFAULT_SETTINGS = { shortcut: 'PrintScreen', shortcutMode: 'region' };
 let settings = { ...DEFAULT_SETTINGS };
@@ -764,19 +766,18 @@ function registerShortcut(shortcut) {
 
 function configureAutoUpdates() {
   if (!app.isPackaged) return;
-  let autoUpdater;
   try {
-    ({ autoUpdater } = require('electron-updater'));
+    ({ autoUpdater: appUpdater } = require('electron-updater'));
   } catch (err) {
     console.error('O componente de atualização não pôde ser carregado:', err);
     return;
   }
 
-  autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
-  autoUpdater.on('error', (err) => console.warn('Verificação de atualização falhou:', err.message || err));
-  autoUpdater.on('update-available', (info) => console.info(`Atualização ${info.version} encontrada; iniciando download.`));
-  autoUpdater.on('update-downloaded', async (info) => {
+  appUpdater.autoDownload = true;
+  appUpdater.autoInstallOnAppQuit = true;
+  appUpdater.on('error', (err) => console.warn('Verificação de atualização falhou:', err.message || err));
+  appUpdater.on('update-available', (info) => console.info(`Atualização ${info.version} encontrada; iniciando download.`));
+  appUpdater.on('update-downloaded', async (info) => {
     try {
       const result = await dialog.showMessageBox({
         type: 'info',
@@ -787,19 +788,26 @@ function configureAutoUpdates() {
         defaultId: 0,
         cancelId: 1
       });
-      if (result.response === 0) autoUpdater.quitAndInstall();
+      if (result.response === 0) appUpdater.quitAndInstall();
     } catch (err) {
       console.error('Não foi possível exibir a confirmação da atualização:', err);
     }
   });
 
-  const checkForUpdates = () => autoUpdater.checkForUpdates().catch((err) => {
+  const checkForUpdates = () => checkForAppUpdates().catch((err) => {
     console.warn('Não foi possível consultar atualizações do PrintShot:', err.message || err);
   });
   const startupCheck = setTimeout(checkForUpdates, 10000);
   startupCheck.unref?.();
   const periodicCheck = setInterval(checkForUpdates, 4 * 60 * 60 * 1000);
   periodicCheck.unref?.();
+}
+
+function checkForAppUpdates() {
+  if (!appUpdater) return Promise.reject(new Error('O serviço de atualização não está disponível.'));
+  if (updateCheckPromise) return updateCheckPromise;
+  updateCheckPromise = appUpdater.checkForUpdates().finally(() => { updateCheckPromise = null; });
+  return updateCheckPromise;
 }
 
 /* ---------------- Comunicação com as telas ---------------- */
@@ -1055,7 +1063,23 @@ ipcMain.handle('translation:translate', async (_e, text, source, target) => {
   return { text: translated.join('') };
 });
 
-ipcMain.handle('settings:get', () => settings);
+ipcMain.handle('settings:get', () => ({ ...settings, version: app.getVersion() }));
+
+ipcMain.handle('updates:check', async () => {
+  if (!app.isPackaged) return { ok: false, error: 'A verificação só funciona na versão instalada.' };
+  if (!appUpdater) return { ok: false, error: 'O serviço de atualização não está disponível.' };
+  try {
+    const result = await checkForAppUpdates();
+    return {
+      ok: true,
+      available: Boolean(result?.isUpdateAvailable),
+      version: result?.updateInfo?.version || app.getVersion(),
+      currentVersion: app.getVersion()
+    };
+  } catch (err) {
+    return { ok: false, error: err.message || 'Não foi possível verificar atualizações.' };
+  }
+});
 
 ipcMain.handle('settings:set', (_e, next) => {
   const previous = { ...settings };

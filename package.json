@@ -1,6 +1,6 @@
 {
   "name": "printshot-qa-studio",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Ferramenta de captura de tela e documentação visual para analistas de QA.",
   "main": "main.js",
   "scripts": {

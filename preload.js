@@ -43,6 +43,7 @@ contextBridge.exposeInMainWorld('printshot', {
     clear: () => ipcRenderer.invoke('history:clear')
   },
   getSettings: () => ipcRenderer.invoke('settings:get'),
+  checkForUpdates: () => ipcRenderer.invoke('updates:check'),
   setSettings: (s) => ipcRenderer.invoke('settings:set', s),
   overlay: {
     onInit: (cb) => ipcRenderer.on('overlay:init', (_e, data) => cb(data)),
