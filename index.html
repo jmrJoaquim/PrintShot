@@ -1166,7 +1166,7 @@
         const result = await api.checkForUpdates();
         if (!result.ok) throw new Error(result.error || 'Não foi possível verificar atualizações.');
         status.textContent = result.available
-          ? `A versão ${result.version} foi encontrada. O download começou em segundo plano.`
+          ? `A versão ${result.version} foi encontrada. Aguarde a pergunta para autorizar o download.`
           : `Você já está usando a versão mais recente (v${result.currentVersion}).`;
       } catch (error) {
         status.textContent = error.message || 'Não foi possível verificar atualizações.';

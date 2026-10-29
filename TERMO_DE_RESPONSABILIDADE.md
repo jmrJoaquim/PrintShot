@@ -1,6 +1,6 @@
 # Termo de responsabilidade e ciência de uso — PrintShot QA Studio
 
-**Versão do software e deste termo: 2.0.2**
+**Versão do software e deste termo: 2.0.3**
 **Responsável:** Joaquim Rodrigues  
 **E-mail para contato:** jmr.joaquimmenezes@gmail.com
 

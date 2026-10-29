@@ -20,6 +20,7 @@ let webPageCaptureRunning = false;
 let ocrWorkerPromise = null;
 let appUpdater = null;
 let updateCheckPromise = null;
+let updatePromptOpen = false;
 
 const DEFAULT_SETTINGS = { shortcut: 'PrintScreen', shortcutMode: 'region' };
 let settings = { ...DEFAULT_SETTINGS };
@@ -773,17 +774,40 @@ function configureAutoUpdates() {
     return;
   }
 
-  appUpdater.autoDownload = true;
+  appUpdater.autoDownload = false;
   appUpdater.autoInstallOnAppQuit = true;
   appUpdater.on('error', (err) => console.warn('Verificação de atualização falhou:', err.message || err));
-  appUpdater.on('update-available', (info) => console.info(`Atualização ${info.version} encontrada; iniciando download.`));
+  appUpdater.on('update-available', async (info) => {
+    console.info(`Atualização ${info.version} encontrada.`);
+    if (updatePromptOpen) return;
+    updatePromptOpen = true;
+    try {
+      const result = await dialog.showMessageBox({
+        type: 'info',
+        title: 'Atualização do PrintShot disponível',
+        message: `A versão ${info.version} está disponível.`,
+        detail: 'Deseja baixar e instalar esta atualização agora? Se escolher “Agora não”, você continuará usando esta versão e será avisado novamente na próxima vez que abrir o PrintShot.',
+        buttons: ['Baixar e instalar', 'Agora não'],
+        defaultId: 0,
+        cancelId: 1,
+        noLink: true
+      });
+      if (result.response === 0) {
+        await appUpdater.downloadUpdate();
+      }
+    } catch (err) {
+      console.error('Não foi possível iniciar o download da atualização:', err.message || err);
+    } finally {
+      updatePromptOpen = false;
+    }
+  });
   appUpdater.on('update-downloaded', async (info) => {
     try {
       const result = await dialog.showMessageBox({
         type: 'info',
         title: 'Atualização do PrintShot pronta',
         message: `A versão ${info.version} foi baixada.`,
-        detail: 'Reinicie o PrintShot agora para instalar a atualização. Se escolher mais tarde, ela será instalada quando o aplicativo for fechado.',
+        detail: 'Reinicie o PrintShot agora para concluir a instalação. Se escolher mais tarde, ela será instalada quando o aplicativo for fechado.',
         buttons: ['Reiniciar agora', 'Mais tarde'],
         defaultId: 0,
         cancelId: 1
@@ -799,8 +823,6 @@ function configureAutoUpdates() {
   });
   const startupCheck = setTimeout(checkForUpdates, 10000);
   startupCheck.unref?.();
-  const periodicCheck = setInterval(checkForUpdates, 4 * 60 * 60 * 1000);
-  periodicCheck.unref?.();
 }
 
 function checkForAppUpdates() {
