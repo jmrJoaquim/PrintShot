@@ -1,0 +1,51 @@
+{
+  "name": "printshot-qa-studio",
+  "version": "2.0.1",
+  "description": "Ferramenta de captura de tela e documentação visual para analistas de QA.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "sync:terms-version": "node scripts/sync-terms-version.cjs",
+    "prebuild:win": "npm run sync:terms-version",
+    "build:win": "electron-builder --config electron-builder.config.cjs --win"
+  },
+  "keywords": [
+    "qa",
+    "screenshot",
+    "testing",
+    "printshot",
+    "electron"
+  ],
+  "author": "Joaquim Rodrigues",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.0"
+  },
+  "build": {
+    "appId": "com.printshot.qastudio",
+    "productName": "PrintShot QA Studio",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "icon.ico"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "overlay.html",
+      "scroll-controller.html",
+      "web-capture-controller.html",
+      "TERMO_DE_RESPONSABILIDADE.md",
+      "icon.png",
+      "icon.ico"
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11",
+    "tesseract.js": "^7.0.0"
+  }
+}

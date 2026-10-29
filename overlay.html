@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+  <title>Selecionar área</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; cursor: crosshair; user-select: none;
+      font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif; }
+    canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+    .hint { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(17,18,20,.92);
+      color: #ececef; border: 1px solid #2c2d33; border-radius: 999px; padding: 8px 16px; font-size: 13px;
+      display: flex; gap: 14px; align-items: center; pointer-events: none; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+    .hint kbd { background: #26272c; border: 1px solid #3a3b42; border-radius: 4px; padding: 1px 6px; font-size: 11px; font-family: inherit; }
+    .hint b { color: #ff7a4d; font-weight: 600; }
+    .size { position: fixed; background: #ff6a3d; color: #1a0d08; font-size: 12px; font-weight: 600;
+      padding: 3px 8px; border-radius: 4px; pointer-events: none; display: none; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div class="hint"><b>Arraste</b> para recortar <span><kbd>Enter</kbd> tela inteira</span> <span><kbd>Esc</kbd> cancelar</span></div>
+  <div class="size" id="size"></div>
+  <script>
+    const c = document.getElementById('c');
+    const ctx = c.getContext('2d');
+    const sizeEl = document.getElementById('size');
+    const img = new Image();
+    let ready = false, dragging = false, sx = 0, sy = 0, ex = 0, ey = 0, mx = -1, my = -1;
+    let selectionMode = 'region';
+
+    function resize() {
+      c.width = window.innerWidth * devicePixelRatio;
+      c.height = window.innerHeight * devicePixelRatio;
+      draw();
+    }
+
+    function sel() {
+      return { x: Math.min(sx, ex), y: Math.min(sy, ey), w: Math.abs(ex - sx), h: Math.abs(ey - sy) };
+    }
+
+    function draw() {
+      if (!ready) return;
+      const d = devicePixelRatio;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      ctx.fillStyle = 'rgba(8, 8, 10, 0.55)';
+      ctx.fillRect(0, 0, c.width, c.height);
+      ctx.scale(d, d);
+
+      if (dragging) {
+        const r = sel();
+        const kx = img.naturalWidth / window.innerWidth, ky = img.naturalHeight / window.innerHeight;
+        if (r.w > 0 && r.h > 0) {
+          ctx.drawImage(img, r.x * kx, r.y * ky, r.w * kx, r.h * ky, r.x, r.y, r.w, r.h);
+        }
+        ctx.strokeStyle = '#ff6a3d';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(r.x + .5, r.y + .5, r.w, r.h);
+        // alças nos cantos
+        ctx.fillStyle = '#ff6a3d';
+        [[r.x, r.y], [r.x + r.w, r.y], [r.x, r.y + r.h], [r.x + r.w, r.y + r.h]].forEach(([px, py]) => ctx.fillRect(px - 3, py - 3, 6, 6));
+
+        sizeEl.style.display = 'block';
+        sizeEl.textContent = `${Math.round(r.w * kx)} × ${Math.round(r.h * ky)}`;
+        sizeEl.style.left = `${r.x}px`;
+        sizeEl.style.top = `${Math.max(4, r.y - 28)}px`;
+      } else if (mx >= 0) {
+        ctx.strokeStyle = 'rgba(255,122,77,.55)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(mx + .5, 0); ctx.lineTo(mx + .5, window.innerHeight);
+        ctx.moveTo(0, my + .5); ctx.lineTo(window.innerWidth, my + .5);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    function crop(r) {
+      const kx = img.naturalWidth / window.innerWidth, ky = img.naturalHeight / window.innerHeight;
+      const out = document.createElement('canvas');
+      out.width = Math.max(1, Math.round(r.w * kx));
+      out.height = Math.max(1, Math.round(r.h * ky));
+      out.getContext('2d').drawImage(img, r.x * kx, r.y * ky, r.w * kx, r.h * ky, 0, 0, out.width, out.height);
+      return out.toDataURL('image/png');
+    }
+
+    window.printshot.overlay.onInit(({ dataUrl, mode }) => {
+      selectionMode = mode || 'region';
+      if (selectionMode === 'scroll-area') {
+        document.querySelector('.hint').innerHTML = '<b>Arraste</b> para definir a área do documento <span><kbd>Enter</kbd> monitor inteiro</span> <span><kbd>Esc</kbd> cancelar</span>';
+      }
+      img.onload = () => { ready = true; resize(); };
+      img.src = dataUrl;
+    });
+
+    window.addEventListener('resize', resize);
+    window.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) { window.printshot.overlay.cancel(); return; }
+      dragging = true; sx = ex = e.clientX; sy = ey = e.clientY; draw();
+    });
+    window.addEventListener('mousemove', (e) => {
+      mx = e.clientX; my = e.clientY;
+      if (dragging) { ex = e.clientX; ey = e.clientY; }
+      draw();
+    });
+    window.addEventListener('mouseup', () => {
+      if (!dragging) return;
+      dragging = false;
+      sizeEl.style.display = 'none';
+      const r = sel();
+      if (r.w < 4 || r.h < 4) { draw(); return; }
+      if (selectionMode === 'scroll-area') {
+        const kx = img.naturalWidth / window.innerWidth, ky = img.naturalHeight / window.innerHeight;
+        window.printshot.overlay.selectScrollArea({ x: Math.round(r.x * kx), y: Math.round(r.y * ky), width: Math.round(r.w * kx), height: Math.round(r.h * ky) });
+      } else window.printshot.overlay.done(crop(r));
+    });
+    window.addEventListener('contextmenu', (e) => { e.preventDefault(); window.printshot.overlay.cancel(); });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') window.printshot.overlay.cancel();
+      if (e.key === 'Enter' && ready) {
+        if (selectionMode === 'scroll-area') window.printshot.overlay.selectScrollArea({ x: 0, y: 0, width: img.naturalWidth, height: img.naturalHeight });
+        else window.printshot.overlay.done(crop({ x: 0, y: 0, w: window.innerWidth, h: window.innerHeight }));
+      }
+    });
+  </script>
+</body>
+</html>

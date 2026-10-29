@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+  <title>PrintShot Studio</title>
+  <style>
+    :root {
+      --bg: #0e0f11;
+      --surface: #16171a;
+      --surface-2: #1d1e22;
+      --surface-3: #26272c;
+      --border: #2a2b31;
+      --border-strong: #3a3b42;
+      --text: #ececef;
+      --text-muted: #8b8d97;
+      --text-faint: #5d5f68;
+      --accent: #ff6a3d;
+      --accent-hover: #ff8259;
+      --accent-ink: #1a0d08;
+      --accent-soft: rgba(255, 106, 61, 0.14);
+      --success: #3ecf8e;
+      --danger: #ff5c5c;
+    --radius: 14px;
+      --font: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 13px;
+      display: grid; grid-template-rows: 52px 1fr 30px; grid-template-columns: 64px 1fr 236px;
+      grid-template-areas: "top top top" "rail stage side" "foot foot foot"; overflow: hidden; user-select: none; }
+    button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+    svg.i { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    kbd { font-family: inherit; font-size: 10.5px; background: var(--surface-3); border: 1px solid var(--border-strong);
+      border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: var(--text-muted); }
+
+    /* ---------- Barra superior ---------- */
+    .top { grid-area: top; display: flex; align-items: center; gap: 10px; padding: 0 12px;
+      background: var(--surface); border-bottom: 1px solid var(--border); }
+    .brand { display: flex; align-items: center; gap: 9px; padding-right: 8px; }
+    .brand img { width: 26px; height: 26px; border-radius: 6px; }
+    .brand strong { font-size: 14px; font-weight: 650; letter-spacing: -.01em; }
+    .brand span { color: var(--accent); }
+    .sep { width: 1px; height: 24px; background: var(--border); margin: 0 2px; }
+    .spacer { flex: 1; }
+    .btn { height: 36px; padding: 0 13px; border-radius: 12px; display: inline-flex; align-items: center; gap: 7px;
+      font-weight: 550; transition: background .16s, color .16s, transform .08s, box-shadow .16s; white-space: nowrap; }
+    .btn:active { transform: translateY(1px); }
+    .btn:disabled { opacity: .35; cursor: default; }
+    .btn-primary { background: var(--accent); color: var(--accent-ink); box-shadow: 0 2px 8px rgba(255,106,61,.14); }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); box-shadow: 0 4px 14px rgba(255,106,61,.22); }
+    .btn-ghost { color: var(--text); }
+    .btn-ghost:hover:not(:disabled) { background: var(--surface-3); color: var(--text); }
+    .btn-outline { border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.045); }
+    .btn-outline:hover:not(:disabled) { background: rgba(255,255,255,.09); border-color: rgba(255,255,255,.13); }
+    .btn-icon { width: 36px; padding: 0; justify-content: center; border-radius: 12px; }
+
+    /* ---------- Ferramentas (lateral esquerda) ---------- */
+    .rail { grid-area: rail; background: rgba(22,23,26,.94); border-right: 1px solid rgba(255,255,255,.055);
+      display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 0; overflow-y: auto; }
+    .tool { position: relative; width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; color: #9395a0; transition: background .16s, color .16s, transform .12s; }
+    .tool:hover { background: rgba(255,255,255,.075); color: var(--text); transform: scale(1.04); }
+    .tool.active { background: rgba(255,255,255,.11); color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+    .tool .k { display: none; }
+    .rail-sep { width: 30px; height: 1px; background: rgba(255,255,255,.09); margin: 7px 0; }
+    .palette-trigger { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; gap: 3px; border: 1px solid rgba(255,255,255,.09); background: rgba(255,255,255,.045); transition: background .16s, transform .12s; }
+    .palette-trigger:hover, .palette-trigger.open { background: rgba(255,255,255,.11); transform: scale(1.04); }
+    .palette-color { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(255,255,255,.8); box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+    .palette-size { display: block; width: 18px; height: 3px; border-radius: 99px; background: #fff; }
+    .palette-popover { position: fixed; z-index: 260; display: none; width: 220px; padding: 14px; border-radius: 18px;
+      background: rgba(36,37,42,.97); border: 1px solid rgba(255,255,255,.11); box-shadow: 0 18px 48px rgba(0,0,0,.42); backdrop-filter: blur(24px); }
+    .palette-popover.open { display: block; animation: toastIn .14s ease-out; }
+    .palette-title { margin: 1px 2px 10px; color: var(--text-muted); font-size: 11px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+    .palette-swatches { display: grid; grid-template-columns: repeat(4, 1fr); justify-items: center; gap: 10px 8px; }
+    .palette-sizes { display: flex; gap: 6px; }
+    .palette-popover .rail-sep { width: 100%; margin: 14px 0; }
+    .swatch { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgba(255,255,255,.15); transition: transform .12s, border-color .12s; }
+    .swatch:hover { transform: scale(1.1); }
+    .swatch.active { border-color: var(--text); }
+    .swatch-custom { position: relative; overflow: hidden; background: conic-gradient(#ff3b30, #ffcc00, #34c759, #0a84ff, #bf5af2, #ff3b30); }
+    .swatch-custom input { position: absolute; inset: -6px; opacity: 0; cursor: pointer; }
+    .size-btn { flex: 1; height: 36px; border-radius: 11px; display: grid; place-items: center; background: rgba(255,255,255,.045); }
+    .size-btn:hover { background: rgba(255,255,255,.11); }
+    .size-btn i { display: block; width: 18px; border-radius: 4px; background: var(--text-muted); }
+    .size-btn.active i { background: var(--accent); }
+    .tooltip { position: fixed; z-index: 300; background: var(--surface-3); border: 1px solid var(--border-strong); color: var(--text);
+      padding: 5px 9px; border-radius: 6px; font-size: 12px; pointer-events: none; white-space: nowrap; box-shadow: var(--shadow); display: none; }
+    .tooltip kbd { margin-left: 6px; }
+
+    /* ---------- Área do editor ---------- */
+    .stage { grid-area: stage; position: relative; overflow: auto; display: flex;
+      background: radial-gradient(circle at 1px 1px, #1c1d21 1px, transparent 0) 0 0 / 22px 22px, var(--bg); }
+    .canvas-wrap { position: relative; margin: auto; border-radius: 6px; box-shadow: var(--shadow), 0 0 0 1px var(--border); display: none; }
+    .canvas-wrap.show { display: block; }
+    canvas { display: block; border-radius: 6px; }
+    .text-editor { position: absolute; background: rgba(14,15,17,.75); border: 1.5px dashed var(--accent); border-radius: 4px;
+      outline: none; resize: none; overflow: hidden; padding: 2px 4px; font-weight: 600; font-family: var(--font); line-height: 1.25; min-width: 140px; }
+
+    .empty { margin: auto; text-align: center; max-width: 460px; padding: 40px; }
+    .empty-art { width: 92px; height: 92px; margin: 0 auto 22px; border-radius: 24px; display: grid; place-items: center;
+      background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px rgba(255,106,61,.35); }
+    .empty-art svg.i { width: 40px; height: 40px; stroke-width: 1.5; }
+    .empty h1 { font-size: 22px; font-weight: 650; letter-spacing: -.02em; margin-bottom: 8px; }
+    .empty p { color: var(--text-muted); line-height: 1.55; margin-bottom: 22px; }
+    .empty .row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .empty .btn { height: 40px; padding: 0 16px; }
+    .empty .tips { margin-top: 26px; display: grid; gap: 8px; color: var(--text-faint); font-size: 12px; }
+    .empty .tips span { display: inline-flex; gap: 6px; align-items: center; justify-content: center; }
+    .drop-hint { position: absolute; inset: 14px; border: 2px dashed var(--accent); border-radius: 14px; background: var(--accent-soft);
+      display: none; place-items: center; font-size: 16px; font-weight: 600; color: var(--accent); pointer-events: none; z-index: 5; }
+    body.dragover .drop-hint { display: grid; }
+
+    /* ---------- Histórico (lateral direita) ---------- */
+    .side { grid-area: side; background: rgba(22,23,26,.92); border-left: 1px solid rgba(255,255,255,.055); display: flex; flex-direction: column; min-height: 0; }
+    .side h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); font-weight: 650;
+      padding: 14px 14px 10px; display: flex; justify-content: space-between; align-items: center; }
+    .side h2 button { font-size: 11px; color: var(--text-faint); text-transform: none; letter-spacing: 0; font-weight: 500; }
+    .side h2 button:hover { color: var(--danger); }
+    .history { flex: 1; overflow-y: auto; padding: 0 10px 12px; display: grid; gap: 8px; align-content: start; }
+    .thumb { position: relative; border-radius: 13px; overflow: hidden; border: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.035); text-align: left; transition: border-color .16s, transform .16s, background .16s; }
+    .thumb:hover { border-color: rgba(255,255,255,.16); background: rgba(255,255,255,.055); transform: translateY(-1px); }
+    .thumb.active { border-color: rgba(255,106,61,.7); box-shadow: 0 0 0 2px rgba(255,106,61,.12); }
+    .thumb img { display: block; width: 100%; height: 112px; object-fit: cover; object-position: top left; background: #000; }
+    .thumb .meta { padding: 6px 8px; font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; }
+    .thumb .del { position: absolute; top: 7px; right: 7px; width: 28px; height: 28px; border-radius: 50%; background: rgba(14,15,17,.85);
+      color: var(--text-muted); display: none; place-items: center; }
+    .thumb:hover .del { display: grid; }
+    .thumb .del:hover { color: var(--danger); }
+    .thumb .del svg.i { width: 14px; height: 14px; }
+    .history-empty { color: var(--text-faint); font-size: 12px; padding: 4px 6px; line-height: 1.5; }
+
+    /* ---------- Rodapé ---------- */
+    .foot { grid-area: foot; background: var(--surface); border-top: 1px solid var(--border); display: flex; align-items: center;
+      gap: 16px; padding: 0 14px; font-size: 11.5px; color: var(--text-muted); }
+    .foot .live { display: inline-flex; align-items: center; gap: 6px; }
+    .foot .live i { width: 7px; height: 7px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 3px rgba(62,207,142,.15); }
+    .foot .author { color: var(--text); font-weight: 550; }
+    .zoom-btn { color: var(--text-muted); padding: 2px 6px; border-radius: 4px; font-size: 11.5px; }
+    .zoom-btn:hover { background: var(--surface-3); color: var(--text); }
+    .zoom-controls { display: none; align-items: center; gap: 4px; }
+    .zoom-controls .btn { height: 25px; min-width: 27px; padding: 0 7px; border-radius: 8px; font-size: 11px; }
+    .zoom-level { min-width: 48px; text-align: center; color: var(--text); font-variant-numeric: tabular-nums; }
+
+    /* ---------- Avisos rápidos ---------- */
+    .toasts { position: fixed; bottom: 46px; left: 50%; transform: translateX(-50%); display: grid; gap: 8px; z-index: 400; justify-items: center; }
+    .toast { background: var(--surface-3); border: 1px solid var(--border-strong); border-radius: 10px; padding: 10px 14px;
+      display: flex; align-items: center; gap: 9px; box-shadow: var(--shadow); animation: toastIn .18s ease-out; font-weight: 500; max-width: 520px; }
+    .toast svg.i { width: 16px; height: 16px; }
+    .toast.ok svg.i { color: var(--success); }
+    .toast.err svg.i { color: var(--danger); }
+    .toast.out { animation: toastOut .2s ease-in forwards; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } }
+    @keyframes toastOut { to { opacity: 0; transform: translateY(8px); } }
+
+    /* ---------- Janelas (modais) ---------- */
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(3px); z-index: 200; display: none; place-items: center; }
+    .modal.open { display: grid; }
+    .dialog { width: min(480px, 92vw); background: rgba(26,27,31,.97); border: 1px solid rgba(255,255,255,.1); border-radius: 20px; box-shadow: var(--shadow); animation: toastIn .16s ease-out; backdrop-filter: blur(24px); }
+    .dialog.wide { width: min(760px, 94vw); max-height: 92vh; display: flex; flex-direction: column; }
+    .dialog header { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 6px; }
+    .dialog header h3 { font-size: 15px; font-weight: 650; display: flex; gap: 8px; align-items: center; }
+    .dialog header h3 svg.i { color: var(--accent); }
+    .dialog .body { padding: 10px 18px; display: grid; gap: 14px; }
+    .dialog.wide .body { overflow-y: auto; }
+    .dialog footer { padding: 12px 18px 16px; display: flex; justify-content: flex-end; gap: 8px; }
+    .field label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 500; }
+    .field small { display: block; color: var(--text-faint); font-size: 11.5px; margin-top: 6px; line-height: 1.45; }
+    .input { width: 100%; background: rgba(0,0,0,.18); border: 1px solid rgba(255,255,255,.09); border-radius: 12px; color: var(--text);
+      padding: 9px 11px; font: inherit; user-select: text; }
+    .input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    textarea.input { resize: vertical; line-height: 1.5; }
+    .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .seg button { border: 1px solid var(--border-strong); border-radius: 8px; padding: 9px; color: var(--text-muted); background: var(--surface-2); }
+    .seg button.active { border-color: var(--accent); color: var(--text); background: var(--accent-soft); }
+    .suggestions { display: grid; gap: 7px; max-height: 170px; overflow: auto; }
+    .suggestion { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 7px; color: var(--text-muted); font-size: 12px; }
+    .suggestion input { accent-color: var(--accent); }
+    #ocrText, #translatedText { min-height: 130px; max-height: 240px; }
+    .translation-controls { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; }
+    .privacy-note { padding: 9px 11px; border: 1px solid rgba(255,190,80,.18); border-radius: 11px; color: #c9b98f; background: rgba(255,190,80,.055); line-height: 1.45; font-size: 11.5px; }
+  </style>
+</head>
+<body>
+  <!-- Ícones (embutidos — funcionam sem internet) -->
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <symbol id="i-crop" viewBox="0 0 24 24"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></symbol>
+      <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+      <symbol id="i-pointer" viewBox="0 0 24 24"><path d="M4 4l7 17 2.5-7.5L21 11z"/></symbol>
+      <symbol id="i-step" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10.5 9l2-1.5V16"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 19L19 5M9 5h10v10"/></symbol>
+      <symbol id="i-rect" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/></symbol>
+      <symbol id="i-highlight" viewBox="0 0 24 24"><path d="M9 11l-6 6v3h9l3-3"/><path d="M22 12l-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></symbol>
+      <symbol id="i-text" viewBox="0 0 24 24"><path d="M4 7V5h16v2M9 19h6M12 5v14"/></symbol>
+      <symbol id="i-blur" viewBox="0 0 24 24"><rect x="3" y="3" width="6" height="6"/><rect x="15" y="3" width="6" height="6"/><rect x="9" y="9" width="6" height="6"/><rect x="3" y="15" width="6" height="6"/><rect x="15" y="15" width="6" height="6"/></symbol>
+      <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></symbol>
+      <symbol id="i-redo" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
+      <symbol id="i-save" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></symbol>
+      <symbol id="i-bug" viewBox="0 0 24 24"><rect x="7" y="8" width="10" height="12" rx="5"/><path d="M9 8V6a3 3 0 0 1 6 0v2M3 13h4M17 13h4M4 7l3 2M20 7l-3 2M4 20l3-2M20 20l-3-2"/></symbol>
+      <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></symbol>
+    </defs>
+  </svg>
+
+  <header class="top">
+    <div class="brand"><img src="icon.png" alt=""><strong>PrintShot <span>Studio</span></strong></div>
+    <div class="sep"></div>
+    <button class="btn btn-primary" id="btnRegion" data-tip="Recortar em qualquer monitor sem selecioná-lo" data-key="Ctrl+N"><svg class="i"><use href="#i-crop"/></svg>Recortar área</button>
+    <button class="btn btn-outline" id="btnFull" data-tip="Capturar a tela inteira" data-key="Ctrl+Shift+N"><svg class="i"><use href="#i-monitor"/></svg>Tela inteira</button>
+    <button class="btn btn-outline" id="btnAllDisplays" data-tip="Capturar todos os monitores em uma imagem combinada"><svg class="i"><use href="#i-monitor"/></svg>Todas as telas</button>
+    <button class="btn btn-outline" id="btnMonitorScroll" data-tip="Selecionar o documento e capturá-lo com rolagem automática">Monitor + scroll</button>
+    <button class="btn btn-outline" id="btnPage" data-tip="Abrir uma URL e capturar a página web inteira automaticamente">Página web</button>
+    <div class="spacer"></div>
+    <button class="btn btn-ghost btn-icon" id="btnUndo" data-tip="Desfazer" data-key="Ctrl+Z" disabled><svg class="i"><use href="#i-undo"/></svg></button>
+    <button class="btn btn-ghost btn-icon" id="btnRedo" data-tip="Refazer" data-key="Ctrl+Y" disabled><svg class="i"><use href="#i-redo"/></svg></button>
+    <button class="btn btn-ghost btn-icon" id="btnDelete" data-tip="Apagar marcação selecionada" data-key="Delete" disabled><svg class="i"><use href="#i-trash"/></svg></button>
+    <div class="sep"></div>
+    <button class="btn btn-ghost" id="btnBug" data-tip="Montar relatório de bug" disabled><svg class="i"><use href="#i-bug"/></svg>Relatório</button>
+    <button class="btn btn-outline" id="btnOcr" data-tip="Extrair texto e sugerir ocultação de dados" disabled>OCR + Privacidade</button>
+    <button class="btn btn-outline" id="btnCopy" data-tip="Copiar imagem para colar em outro lugar" data-key="Ctrl+C" disabled><svg class="i"><use href="#i-copy"/></svg>Copiar</button>
+    <button class="btn btn-primary" id="btnSave" data-tip="Salvar como PNG ou JPG" data-key="Ctrl+S" disabled><svg class="i"><use href="#i-save"/></svg>Salvar</button>
+    <button class="btn btn-ghost btn-icon" id="btnSettings" data-tip="Configurações"><svg class="i"><use href="#i-gear"/></svg></button>
+  </header>
+
+  <nav class="rail" id="rail">
+    <button class="tool" data-tool="select" data-tip="Selecionar e mover" data-key="V"><svg class="i"><use href="#i-pointer"/></svg><span class="k">V</span></button>
+    <button class="tool active" data-tool="step" data-tip="Marcador numerado (1, 2, 3…)" data-key="N"><svg class="i"><use href="#i-step"/></svg><span class="k">N</span></button>
+    <button class="tool" data-tool="arrow" data-tip="Seta" data-key="A"><svg class="i"><use href="#i-arrow"/></svg><span class="k">A</span></button>
+    <button class="tool" data-tool="rect" data-tip="Caixa de destaque" data-key="R"><svg class="i"><use href="#i-rect"/></svg><span class="k">R</span></button>
+    <button class="tool" data-tool="highlight" data-tip="Marca-texto" data-key="H"><svg class="i"><use href="#i-highlight"/></svg><span class="k">H</span></button>
+    <button class="tool" data-tool="text" data-tip="Texto" data-key="T"><svg class="i"><use href="#i-text"/></svg><span class="k">T</span></button>
+    <button class="tool" data-tool="blur" data-tip="Borrar dados sensíveis" data-key="B"><svg class="i"><use href="#i-blur"/></svg><span class="k">B</span></button>
+    <div class="rail-sep"></div>
+    <button class="palette-trigger" id="paletteToggle" data-tip="Cor e espessura" aria-label="Abrir cores e espessuras" aria-expanded="false">
+      <span class="palette-color" id="activeColorPreview"></span><i class="palette-size" id="activeSizePreview"></i>
+    </button>
+  </nav>
+  <div class="palette-popover" id="palettePopover" role="dialog" aria-label="Cor e espessura">
+    <div class="palette-title">Cores</div>
+    <div class="palette-swatches" id="swatches"></div>
+    <div class="rail-sep"></div>
+    <div class="palette-title">Espessura</div>
+    <div class="palette-sizes" id="sizes"></div>
+  </div>
+
+  <main class="stage" id="stage">
+    <div class="empty" id="empty">
+      <div class="empty-art"><svg class="i"><use href="#i-crop"/></svg></div>
+      <h1>Capture, marque e compartilhe</h1>
+      <p>Recorte só o pedaço que importa, numere os passos, borre dados sensíveis e cole direto no Jira, Teams ou e-mail.</p>
+      <div class="row">
+        <button class="btn btn-primary" data-action="region"><svg class="i"><use href="#i-crop"/></svg>Recortar área</button>
+        <button class="btn btn-outline" data-action="full"><svg class="i"><use href="#i-monitor"/></svg>Tela inteira</button>
+        <button class="btn btn-outline" data-action="all"><svg class="i"><use href="#i-monitor"/></svg>Todas as telas</button>
+        <button class="btn btn-outline" data-action="monitor-scroll">Monitor + scroll</button>
+      </div>
+      <div class="tips">
+        <span>Atalho global: <kbd id="shortcutLabel">PrintScreen</kbd></span>
+        <span>Ou cole uma imagem com <kbd>Ctrl</kbd>+<kbd>V</kbd> / arraste um arquivo aqui</span>
+      </div>
+    </div>
+    <div class="canvas-wrap" id="wrap"><canvas id="canvas"></canvas></div>
+    <div class="drop-hint">Solte a imagem para abrir</div>
+  </main>
+
+  <aside class="side">
+    <h2>Histórico <button id="btnClearHistory">Limpar</button></h2>
+    <div style="padding:0 10px 10px"><input class="input" id="historySearch" placeholder="Buscar por nome, data ou texto OCR" aria-label="Buscar no histórico"></div>
+    <div class="history" id="history"><div class="history-empty">Seus prints desta sessão aparecem aqui. Clique em um para voltar a editá-lo.</div></div>
+  </aside>
+
+  <footer class="foot">
+    <span class="live"><i></i>Rodando em segundo plano · <kbd id="shortcutLabel2">PrintScreen</kbd> captura</span>
+    <span id="dims"></span>
+    <div class="zoom-controls" id="zoomControls" aria-label="Controles de zoom">
+      <button class="btn btn-ghost" id="zoomOut" title="Diminuir zoom" aria-label="Diminuir zoom">−</button>
+      <span class="zoom-level" id="zoomLevel">100%</span>
+      <button class="btn btn-ghost" id="zoomIn" title="Aumentar zoom" aria-label="Aumentar zoom">+</button>
+      <button class="btn btn-outline" id="zoomFit" title="Ajustar à tela">Ajustar</button>
+    </div>
+    <span class="spacer"></span>
+    <span>Criado e desenvolvido por <span class="author">Joaquim Rodrigues</span></span>
+  </footer>
+
+  <div class="tooltip" id="tooltip"></div>
+  <div class="toasts" id="toasts"></div>
+
+  <div class="modal" id="displayModal">
+    <div class="dialog">
+      <header><h3><svg class="i"><use href="#i-monitor"/></svg>Escolha o monitor</h3><button class="btn btn-ghost btn-icon" data-close><svg class="i"><use href="#i-x"/></svg></button></header>
+      <div class="body"><div class="field"><label>Qual tela deseja capturar?</label><select class="input" id="displaySelect"></select>
+        <small id="displayHelp">A captura será feita na resolução original do monitor.</small></div></div>
+      <footer><button class="btn btn-ghost" data-close>Cancelar</button><button class="btn btn-primary" id="confirmDisplay">Continuar</button></footer>
+    </div>
+  </div>
+
+  <div class="modal" id="webUrlModal">
+    <div class="dialog">
+      <header><h3><svg class="i"><use href="#i-monitor"/></svg>Capturar página web inteira</h3><button class="btn btn-ghost btn-icon" data-close><svg class="i"><use href="#i-x"/></svg></button></header>
+      <div class="body"><div class="field"><label>Endereço da página</label><input class="input" id="webUrl" type="url" placeholder="https://exemplo.com/pagina" autocomplete="url">
+        <small>A página abrirá em uma janela do PrintShot. Faça login, se necessário, e inicie a captura automática pelo painel flutuante.</small></div></div>
+      <footer><button class="btn btn-ghost" data-close>Cancelar</button><button class="btn btn-primary" id="openWebPage">Abrir página</button></footer>
+    </div>
+  </div>
+
+  <div class="modal" id="ocrModal">
+    <div class="dialog wide">
+      <header><h3><svg class="i"><use href="#i-blur"/></svg>Texto e dados sensíveis</h3><button class="btn btn-ghost btn-icon" data-close><svg class="i"><use href="#i-x"/></svg></button></header>
+      <div class="body">
+        <div class="field"><label>Texto reconhecido</label><textarea class="input" id="ocrText" placeholder="O texto reconhecido aparecerá aqui"></textarea><small>O reconhecimento é feito localmente. Confira o resultado antes de copiar.</small></div>
+        <div class="field">
+          <label>Tradução inteligente</label>
+          <div class="translation-controls">
+            <div><label for="translationSource">De</label><select class="input" id="translationSource"><option value="en">Inglês</option><option value="es">Espanhol</option><option value="fr">Francês</option><option value="de">Alemão</option><option value="it">Italiano</option><option value="ja">Japonês</option><option value="zh-CN">Chinês</option><option value="ru">Russo</option><option value="ko">Coreano</option><option value="nl">Holandês</option><option value="pt">Português</option></select></div>
+            <div><label for="translationTarget">Para</label><select class="input" id="translationTarget"><option value="pt">Português</option><option value="en">Inglês</option><option value="es">Espanhol</option><option value="fr">Francês</option><option value="de">Alemão</option><option value="it">Italiano</option><option value="ja">Japonês</option><option value="zh-CN">Chinês</option><option value="ru">Russo</option><option value="ko">Coreano</option><option value="nl">Holandês</option></select></div>
+            <button class="btn btn-outline" id="translateOcrText">Traduzir</button>
+          </div>
+          <small>A tradução usa um serviço online gratuito; confira a tradução antes de usá-la.</small>
+        </div>
+        <div class="field"><label>Prévia da tradução</label><textarea class="input" id="translatedText" placeholder="A tradução aparecerá aqui" readonly></textarea></div>
+        <div class="privacy-note">Ao traduzir, somente o texto OCR será enviado ao MyMemory. Não envie informações confidenciais. O serviço gratuito tem limite diário e pode não traduzir corretamente todos os trechos.</div>
+        <div class="field"><label>Sugestões de ocultação — revise antes de aplicar</label><div class="suggestions" id="privacySuggestions"><small>Nenhuma sugestão carregada.</small></div></div>
+        <label class="suggestion"><input type="checkbox" id="indexOcrText"><span>Salvar o texto OCR neste computador para permitir buscas no histórico.</span></label>
+      </div>
+      <footer><button class="btn btn-ghost" data-close>Fechar</button><button class="btn btn-outline" id="copyOcrText">Copiar texto</button><button class="btn btn-outline" id="copyTranslatedText" disabled>Copiar tradução</button><button class="btn btn-primary" id="applyRedactions">Aplicar ocultações selecionadas</button></footer>
+    </div>
+  </div>
+
+  <!-- Configurações -->
+  <div class="modal" id="settingsModal">
+    <div class="dialog">
+      <header><h3><svg class="i"><use href="#i-gear"/></svg>Configurações</h3><button class="btn btn-ghost btn-icon" data-close><svg class="i"><use href="#i-x"/></svg></button></header>
+      <div class="body">
+        <div class="field">
+          <label>Atalho global de captura</label>
+          <select class="input" id="shortcutSelect">
+            <option value="PrintScreen">PrintScreen</option>
+            <option value="CommandOrControl+Shift+S">Ctrl + Shift + S</option>
+            <option value="CommandOrControl+Shift+X">Ctrl + Shift + X</option>
+            <option value="Alt+PrintScreen">Alt + PrintScreen</option>
+            <option value="F9">F9</option>
+            <option value="F10">F10</option>
+          </select>
+          <small>No Windows 11, se o PrintScreen abrir a Ferramenta de Captura, desative em Configurações › Acessibilidade › Teclado.</small>
+        </div>
+        <div class="field">
+          <label>Ao apertar o atalho</label>
+          <div class="seg" id="modeSeg">
+            <button data-mode="region">Recortar área</button>
+            <button data-mode="full">Tela inteira</button>
+          </div>
+        </div>
+      </div>
+      <footer><button class="btn btn-ghost" data-close>Cancelar</button><button class="btn btn-primary" id="saveSettings">Salvar</button></footer>
+    </div>
+  </div>
+
+  <!-- Relatório de bug -->
+  <div class="modal" id="bugModal">
+    <div class="dialog">
+      <header><h3><svg class="i"><use href="#i-bug"/></svg>Relatório de bug</h3><button class="btn btn-ghost btn-icon" data-close><svg class="i"><use href="#i-x"/></svg></button></header>
+      <div class="body">
+        <div class="field"><label>Título</label><input class="input" id="bugTitle" value="Erro no fluxo de teste"></div>
+        <div class="field"><label>Passos para reproduzir</label><textarea class="input" id="bugSteps" rows="5"></textarea>
+          <small>Os números batem com os marcadores colocados no print.</small></div>
+        <div class="field"><label>Resultado esperado</label><input class="input" id="bugExpected" placeholder="O que deveria acontecer"></div>
+        <div class="field"><label>Resultado obtido</label><input class="input" id="bugActual" placeholder="O que aconteceu de fato"></div>
+      </div>
+      <footer>
+        <button class="btn btn-outline" id="bugCopyImage"><svg class="i"><use href="#i-copy"/></svg>Copiar imagem</button>
+        <button class="btn btn-primary" id="bugCopyText"><svg class="i"><use href="#i-copy"/></svg>Copiar texto</button>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const $$ = (s) => [...document.querySelectorAll(s)];
+    const api = window.printshot || null;
+
+    const canvas = $('#canvas');
+    const ctx = canvas.getContext('2d');
+    const COLORS = ['#ff3b30', '#ff9f0a', '#ffd60a', '#30d158', '#0a84ff', '#ffffff'];
+    const SIZES = [2, 4, 7];
+
+    const state = {
+      base: null, shapes: [], tool: 'step', color: COLORS[0], size: 1,
+      selected: null, undo: [], redo: [], snap: '[]',
+      draft: null, drag: null, zoom: 'fit', zoomPercent: 100, scale: 1,
+      history: [], currentId: null, editing: null
+    };
+
+    /* ================= Utilidades ================= */
+    function toast(msg, kind = 'ok') {
+      const el = document.createElement('div');
+      el.className = `toast ${kind}`;
+      el.innerHTML = `<svg class="i"><use href="#i-${kind === 'ok' ? 'check' : 'alert'}"/></svg><span></span>`;
+      el.querySelector('span').textContent = msg;
+      $('#toasts').appendChild(el);
+      setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 220); }, 2600);
+    }
+    const unit = () => state.base ? Math.max(1, Math.max(state.base.width, state.base.height) / 1600) : 1;
+    const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
+    const norm = (s) => ({ x: Math.min(s.x, s.x + s.w), y: Math.min(s.y, s.y + s.h), w: Math.abs(s.w), h: Math.abs(s.h) });
+    const isTyping = (t) => t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT');
+
+    /* ================= Tooltips ================= */
+    const tip = $('#tooltip');
+    document.addEventListener('mouseover', (e) => {
+      const el = e.target.closest('[data-tip]');
+      if (!el) { tip.style.display = 'none'; return; }
+      tip.innerHTML = '';
+      tip.append(el.dataset.tip);
+      if (el.dataset.key) { const k = document.createElement('kbd'); k.textContent = el.dataset.key; tip.append(k); }
+      tip.style.display = 'block';
+      const r = el.getBoundingClientRect(), inRail = el.closest('.rail');
+      const tw = tip.offsetWidth;
+      tip.style.left = `${inRail ? r.right + 8 : Math.min(window.innerWidth - tw - 8, Math.max(8, r.left + r.width / 2 - tw / 2))}px`;
+      tip.style.top = `${inRail ? r.top + r.height / 2 - tip.offsetHeight / 2 : r.bottom + 8}px`;
+    });
+
+    /* ================= Paleta e espessura ================= */
+    function buildPalette() {
+      const sw = $('#swatches');
+      COLORS.forEach((c) => {
+        const b = document.createElement('button');
+        b.className = 'swatch'; b.style.background = c; b.dataset.color = c; b.dataset.tip = 'Cor';
+        b.onclick = () => setColor(c);
+        sw.appendChild(b);
+      });
+      const custom = document.createElement('label');
+      custom.className = 'swatch swatch-custom'; custom.dataset.tip = 'Outra cor';
+      custom.innerHTML = '<input type="color" id="customColor">';
+      sw.appendChild(custom);
+      custom.querySelector('input').addEventListener('input', (e) => setColor(e.target.value));
+
+      SIZES.forEach((s, i) => {
+        const b = document.createElement('button');
+        b.className = 'size-btn'; b.dataset.size = i; b.dataset.tip = ['Fino', 'Médio', 'Grosso'][i];
+        b.innerHTML = `<i style="height:${s}px"></i>`;
+        b.onclick = () => setSize(i);
+        $('#sizes').appendChild(b);
+      });
+      setColor(state.color); setSize(state.size);
+    }
+    function openPalette() {
+      const panel = $('#palettePopover'), trigger = $('#paletteToggle');
+      const r = trigger.getBoundingClientRect();
+      const left = Math.min(window.innerWidth - 232, r.right + 10);
+      const top = Math.max(10, Math.min(window.innerHeight - 230, r.top - 6));
+      panel.style.left = `${left}px`; panel.style.top = `${top}px`;
+      panel.classList.add('open'); trigger.classList.add('open'); trigger.setAttribute('aria-expanded', 'true');
+    }
+    function closePalette() {
+      $('#palettePopover').classList.remove('open');
+      $('#paletteToggle').classList.remove('open');
+      $('#paletteToggle').setAttribute('aria-expanded', 'false');
+    }
+    $('#paletteToggle').onclick = () => $('#palettePopover').classList.contains('open') ? closePalette() : openPalette();
+    document.addEventListener('mousedown', (event) => {
+      if (!event.target.closest('#palettePopover, #paletteToggle')) closePalette();
+    });
+    window.addEventListener('resize', closePalette);
+    function setColor(c) {
+      state.color = c;
+      $('#activeColorPreview').style.background = c;
+      $$('.swatch').forEach((b) => b.classList.toggle('active', b.dataset.color === c || (b.classList.contains('swatch-custom') && $('#customColor').value.toLowerCase() === c.toLowerCase())));
+      if (state.selected && 'color' in state.selected) { state.selected.color = c; commit(); render(); }
+    }
+    function setSize(i) {
+      state.size = i;
+      $('#activeSizePreview').style.height = `${SIZES[i]}px`;
+      $$('.size-btn').forEach((b) => b.classList.toggle('active', +b.dataset.size === i));
+    }
+
+    /* ================= Ferramentas ================= */
+    function setTool(t) {
+      closePalette();
+      finishTextEdit();
+      state.tool = t;
+      $$('.tool').forEach((b) => b.classList.toggle('active', b.dataset.tool === t));
+      if (t !== 'select') { state.selected = null; render(); }
+      updateUI();
+      canvas.style.cursor = t === 'select' ? 'default' : t === 'text' ? 'text' : 'crosshair';
+    }
+    $$('.tool').forEach((b) => b.addEventListener('click', () => setTool(b.dataset.tool)));
+
+    /* ================= Desenho ================= */
+    function stepRadius(lw) { return lw * 2.2 + 11 * unit(); }
+
+    function drawShape(c, s, n) {
+      c.save();
+      c.lineCap = 'round'; c.lineJoin = 'round';
+      switch (s.type) {
+        case 'rect': {
+          const r = norm(s);
+          c.strokeStyle = s.color; c.lineWidth = s.lw;
+          c.beginPath(); c.roundRect(r.x, r.y, r.w, r.h, Math.min(6 * unit(), r.w / 2, r.h / 2)); c.stroke();
+          break;
+        }
+        case 'arrow': {
+          const ang = Math.atan2(s.y2 - s.y1, s.x2 - s.x1);
+          const head = Math.max(14 * unit(), s.lw * 4);
+          c.strokeStyle = c.fillStyle = s.color; c.lineWidth = s.lw;
+          c.beginPath(); c.moveTo(s.x1, s.y1);
+          c.lineTo(s.x2 - Math.cos(ang) * head * .6, s.y2 - Math.sin(ang) * head * .6); c.stroke();
+          c.beginPath(); c.moveTo(s.x2, s.y2);
+          c.lineTo(s.x2 - head * Math.cos(ang - Math.PI / 7), s.y2 - head * Math.sin(ang - Math.PI / 7));
+          c.lineTo(s.x2 - head * Math.cos(ang + Math.PI / 7), s.y2 - head * Math.sin(ang + Math.PI / 7));
+          c.closePath(); c.fill();
+          break;
+        }
+        case 'highlight': {
+          c.strokeStyle = rgba(s.color, .38); c.lineWidth = s.lw * 5;
+          c.beginPath();
+          s.pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+          if (s.pts.length === 1) c.lineTo(s.pts[0][0] + .1, s.pts[0][1]);
+          c.stroke();
+          break;
+        }
+        case 'text': {
+          c.font = `600 ${s.fs}px ${getComputedStyle(document.body).fontFamily}`;
+          c.textBaseline = 'top';
+          c.lineWidth = s.fs / 5; c.strokeStyle = 'rgba(0,0,0,.6)';
+          c.fillStyle = s.color;
+          s.text.split('\n').forEach((line, i) => {
+            const y = s.y + i * s.fs * 1.25;
+            c.strokeText(line, s.x, y); c.fillText(line, s.x, y);
+          });
+          break;
+        }
+        case 'step': {
+          const r = stepRadius(s.lw);
+          c.shadowColor = 'rgba(0,0,0,.35)'; c.shadowBlur = r / 2; c.shadowOffsetY = r / 8;
+          c.fillStyle = s.color;
+          c.beginPath(); c.arc(s.x, s.y, r, 0, Math.PI * 2); c.fill();
+          c.shadowColor = 'transparent';
+          c.lineWidth = Math.max(2, r / 7); c.strokeStyle = '#ffffff'; c.stroke();
+          c.fillStyle = s.color === '#ffffff' || s.color === '#ffd60a' ? '#111214' : '#ffffff';
+          c.font = `700 ${r * 1.05}px ${getComputedStyle(document.body).fontFamily}`;
+          c.textAlign = 'center'; c.textBaseline = 'middle';
+          c.fillText(String(n), s.x, s.y + r * .05);
+          break;
+        }
+        case 'blur': {
+          const r = norm(s);
+          if (r.w < 2 || r.h < 2) break;
+          const block = Math.max(8, 12 * unit());
+          const tmp = document.createElement('canvas');
+          tmp.width = Math.max(1, Math.round(r.w / block)); tmp.height = Math.max(1, Math.round(r.h / block));
+          tmp.getContext('2d').drawImage(state.base, r.x, r.y, r.w, r.h, 0, 0, tmp.width, tmp.height);
+          c.imageSmoothingEnabled = false;
+          c.drawImage(tmp, 0, 0, tmp.width, tmp.height, r.x, r.y, r.w, r.h);
+          break;
+        }
+        case 'redact': {
+          const r = norm(s);
+          c.fillStyle = '#000000';
+          c.fillRect(r.x, r.y, r.w, r.h);
+          break;
+        }
+      }
+      c.restore();
+    }
+
+    function bbox(s) {
+      const pad = s.lw || 0;
+      switch (s.type) {
+        case 'rect': case 'blur': case 'redact': { const r = norm(s); return { x: r.x - pad, y: r.y - pad, w: r.w + pad * 2, h: r.h + pad * 2 }; }
+        case 'arrow': return { x: Math.min(s.x1, s.x2) - pad * 3, y: Math.min(s.y1, s.y2) - pad * 3, w: Math.abs(s.x2 - s.x1) + pad * 6, h: Math.abs(s.y2 - s.y1) + pad * 6 };
+        case 'highlight': {
+          const xs = s.pts.map((p) => p[0]), ys = s.pts.map((p) => p[1]), p2 = s.lw * 2.5;
+          return { x: Math.min(...xs) - p2, y: Math.min(...ys) - p2, w: Math.max(...xs) - Math.min(...xs) + p2 * 2, h: Math.max(...ys) - Math.min(...ys) + p2 * 2 };
+        }
+        case 'text': {
+          ctx.save(); ctx.font = `600 ${s.fs}px ${getComputedStyle(document.body).fontFamily}`;
+          const lines = s.text.split('\n'); const w = Math.max(...lines.map((l) => ctx.measureText(l).width)); ctx.restore();
+          return { x: s.x - 4, y: s.y - 4, w: w + 8, h: lines.length * s.fs * 1.25 + 8 };
+        }
+        case 'step': { const r = stepRadius(s.lw); return { x: s.x - r, y: s.y - r, w: r * 2, h: r * 2 }; }
+      }
+    }
+
+    function hitTest(x, y) {
+      const tol = 6 * unit();
+      for (let i = state.shapes.length - 1; i >= 0; i--) {
+        const b = bbox(state.shapes[i]);
+        if (x >= b.x - tol && x <= b.x + b.w + tol && y >= b.y - tol && y <= b.y + b.h + tol) return state.shapes[i];
+      }
+      return null;
+    }
+
+    function render(forExport = false) {
+      if (!state.base) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(state.base, 0, 0);
+      let n = 0;
+      const all = state.draft ? [...state.shapes, state.draft] : state.shapes;
+      // borrões primeiro, para que as marcações fiquem por cima
+      all.filter((s) => s.type === 'blur' || s.type === 'redact').forEach((s) => drawShape(ctx, s));
+      all.forEach((s) => { if (s.type === 'step') n++; if (s.type !== 'blur' && s.type !== 'redact' && s !== state.editing) drawShape(ctx, s, n); });
+      if (!forExport && state.selected) {
+        const b = bbox(state.selected);
+        ctx.save();
+        ctx.setLineDash([6 * unit(), 4 * unit()]);
+        ctx.lineWidth = 1.5 * unit();
+        ctx.strokeStyle = '#ff6a3d';
+        ctx.strokeRect(b.x, b.y, b.w, b.h);
+        ctx.restore();
+      }
+    }
+
+    function exportDataUrl() {
+      finishTextEdit();
+      render(true);
+      const url = canvas.toDataURL('image/png');
+      render();
+      return url;
+    }
+
+    /* ================= Desfazer / refazer ================= */
+    function commit() {
+      const now = JSON.stringify(state.shapes);
+      if (now === state.snap) return;
+      state.undo.push(state.snap);
+      if (state.undo.length > 100) state.undo.shift();
+      state.redo = [];
+      state.snap = now;
+      persistCurrent();
+      updateUI();
+    }
+    function restore(snap) {
+      state.snap = snap;
+      state.shapes = JSON.parse(snap);
+      state.selected = null;
+      persistCurrent(); render(); updateUI();
+    }
+    function undo() { finishTextEdit(); if (state.undo.length) { state.redo.push(state.snap); restore(state.undo.pop()); } }
+    function redo() { if (state.redo.length) { state.undo.push(state.snap); restore(state.redo.pop()); } }
+    function deleteSelected() {
+      if (!state.selected) return;
+      state.shapes = state.shapes.filter((s) => s !== state.selected);
+      state.selected = null; commit(); render();
+    }
+
+    /* ================= Mouse no editor ================= */
+    function pos(e) {
+      const r = canvas.getBoundingClientRect();
+      return { x: (e.clientX - r.left) * canvas.width / r.width, y: (e.clientY - r.top) * canvas.height / r.height };
+    }
+    function moveShape(s, o, dx, dy) {
+      if ('x' in o) { s.x = o.x + dx; s.y = o.y + dy; }
+      if ('x1' in o) { s.x1 = o.x1 + dx; s.y1 = o.y1 + dy; s.x2 = o.x2 + dx; s.y2 = o.y2 + dy; }
+      if (o.pts) s.pts = o.pts.map(([x, y]) => [x + dx, y + dy]);
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      if (!state.base || e.button !== 0) return;
+      if (state.editing) { finishTextEdit(); return; }
+      const p = pos(e), lw = SIZES[state.size] * unit() * 1.3, color = state.color;
+      const hit = hitTest(p.x, p.y);
+
+      if (state.tool === 'select' || (e.altKey && hit)) {
+        state.selected = hit;
+        if (hit) state.drag = { start: p, orig: JSON.parse(JSON.stringify(hit)), moved: false };
+        render(); updateUI();
+        return;
+      }
+      state.selected = null;
+      switch (state.tool) {
+        case 'step': state.shapes.push({ type: 'step', x: p.x, y: p.y, color, lw }); commit(); render(); break;
+        case 'text': e.preventDefault(); startTextEdit({ type: 'text', x: p.x, y: p.y, text: '', color, fs: (16 + state.size * 6) * unit() }); break;
+        case 'arrow': state.draft = { type: 'arrow', x1: p.x, y1: p.y, x2: p.x, y2: p.y, color, lw }; break;
+        case 'rect': state.draft = { type: 'rect', x: p.x, y: p.y, w: 0, h: 0, color, lw }; break;
+        case 'blur': state.draft = { type: 'blur', x: p.x, y: p.y, w: 0, h: 0 }; break;
+        case 'highlight': state.draft = { type: 'highlight', pts: [[p.x, p.y]], color, lw }; break;
+      }
+    });
+
+    canvas.addEventListener('dblclick', (e) => {
+      const hit = hitTest(pos(e).x, pos(e).y);
+      if (hit && hit.type === 'text') { e.preventDefault(); state.selected = null; startTextEdit(hit); }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!state.base) return;
+      const p = pos(e);
+      if (state.drag) {
+        const s = state.selected, o = state.drag.orig;
+        const dx = p.x - state.drag.start.x, dy = p.y - state.drag.start.y;
+        if (Math.abs(dx) + Math.abs(dy) > 1) state.drag.moved = true;
+        moveShape(s, o, dx, dy); render();
+        return;
+      }
+      const d = state.draft;
+      if (d) {
+        if (d.type === 'arrow') { d.x2 = p.x; d.y2 = p.y; }
+        else if (d.type === 'highlight') {
+          // Shift = linha reta
+          if (e.shiftKey) d.pts = [d.pts[0], [p.x, d.pts[0][1]]]; else d.pts.push([p.x, p.y]);
+        } else { d.w = p.x - d.x; d.h = p.y - d.y; }
+        render();
+        return;
+      }
+      if (e.target === canvas && state.tool === 'select') canvas.style.cursor = hitTest(p.x, p.y) ? 'move' : 'default';
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (state.drag) { if (state.drag.moved) commit(); state.drag = null; return; }
+      const d = state.draft;
+      if (!d) return;
+      state.draft = null;
+      const min = 4 * unit();
+      const big = d.type === 'arrow' ? Math.hypot(d.x2 - d.x1, d.y2 - d.y1) > min
+        : d.type === 'highlight' ? true : Math.abs(d.w) > min && Math.abs(d.h) > min;
+      if (big) { state.shapes.push(d); commit(); }
+      render();
+    });
+
+    /* ================= Texto ================= */
+    function startTextEdit(shape) {
+      finishTextEdit();
+      const isNew = !state.shapes.includes(shape);
+      const ta = document.createElement('textarea');
+      ta.className = 'text-editor';
+      const sc = canvas.getBoundingClientRect().width / canvas.width;
+      ta.style.left = `${shape.x * sc - 6}px`;
+      ta.style.top = `${shape.y * sc - 4}px`;
+      ta.style.fontSize = `${shape.fs * sc}px`;
+      ta.style.color = shape.color;
+      ta.value = shape.text;
+      ta.rows = Math.max(1, shape.text.split('\n').length);
+      ta.placeholder = 'Digite… (Enter confirma)';
+      $('#wrap').appendChild(ta);
+      state.editing = shape;
+      state.editingIsNew = isNew;
+      state.editingEl = ta;
+      render();
+      ta.focus(); ta.select();
+      const grow = () => { ta.rows = ta.value.split('\n').length; ta.style.width = `${Math.max(140, ta.scrollWidth + 8)}px`; };
+      ta.addEventListener('input', grow); grow();
+      ta.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); finishTextEdit(); }
+        if (e.key === 'Escape') { ta.value = isNew ? '' : shape.text; finishTextEdit(); }
+      });
+      ta.addEventListener('blur', () => setTimeout(finishTextEdit, 0));
+    }
+    function finishTextEdit() {
+      const s = state.editing, ta = state.editingEl;
+      if (!s || !ta) return;
+      state.editing = null; state.editingEl = null;
+      const val = ta.value.replace(/\s+$/, '');
+      ta.remove();
+      if (val) { s.text = val; if (state.editingIsNew) state.shapes.push(s); }
+      else if (!state.editingIsNew) state.shapes = state.shapes.filter((x) => x !== s);
+      commit(); render();
+    }
+
+    /* ================= Carregar imagem / histórico ================= */
+    function makeThumb(img) {
+      const c = document.createElement('canvas'), w = 440;
+      c.width = w; c.height = Math.round(img.height * (w / img.width));
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      return c.toDataURL('image/jpeg', .75);
+    }
+
+    function openImage(dataUrl, { fromHistory = null, zoom = 'fit' } = {}) {
+      finishTextEdit();
+      const img = new Image();
+      img.onload = () => {
+        state.base = img;
+        canvas.width = img.width; canvas.height = img.height;
+        if (fromHistory) {
+          state.currentId = fromHistory.id;
+          state.shapes = JSON.parse(fromHistory.shapes);
+        } else {
+          const createdAt = new Date();
+          const entry = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, name: `PrintShot_${createdAt.toLocaleString('pt-BR').replace(/[/:]/g, '-')}`, src: dataUrl, thumb: makeThumb(img), shapes: '[]', time: createdAt, w: img.width, h: img.height, ocrText: '' };
+          state.history.unshift(entry);
+          while (state.history.length > 50) {
+            const removed = state.history.pop();
+            api?.history.delete(removed.id);
+          }
+          state.currentId = entry.id;
+          state.shapes = [];
+          api?.history.save({ id: entry.id, name: entry.name, src: dataUrl, thumb: entry.thumb, shapes: entry.shapes, time: entry.time.toISOString(), w: entry.w, h: entry.h })
+            .catch(() => toast('A captura não pôde ser adicionada ao histórico persistente.', 'err'));
+        }
+        state.snap = JSON.stringify(state.shapes);
+        state.undo = []; state.redo = []; state.selected = null;
+        $('#empty').style.display = 'none';
+        $('#wrap').classList.add('show');
+        $('#dims').textContent = `${img.width} × ${img.height}px`;
+        state.zoom = zoom;
+        fit(); render(); renderHistory(); updateUI();
+      };
+      img.src = dataUrl;
+    }
+
+    function persistCurrent() {
+      const e = state.history.find((h) => h.id === state.currentId);
+      if (e) {
+        e.shapes = state.snap;
+        api?.history.update(e.id, e.shapes, e.ocrText || '');
+      }
+    }
+
+    async function openHistoryEntry(entry) {
+      if (entry.id === state.currentId) return;
+      if (!entry.src && api) entry.src = await api.history.load(entry.id);
+      if (entry.src) openImage(entry.src, { fromHistory: entry });
+      else toast('Não foi possível abrir esta captura do histórico.', 'err');
+    }
+
+    function renderHistory() {
+      const box = $('#history');
+      box.innerHTML = '';
+      const query = $('#historySearch').value.trim().toLocaleLowerCase('pt-BR');
+      const visible = state.history.filter((h) => !query || [h.name, h.id, h.time.toLocaleString('pt-BR'), `${h.w}x${h.h}`, h.ocrText]
+        .join(' ').toLocaleLowerCase('pt-BR').includes(query));
+      if (!visible.length) {
+        box.innerHTML = state.history.length ? '<div class="history-empty">Nenhuma captura corresponde à busca.</div>' : '<div class="history-empty">Seus prints desta sessão aparecem aqui. Clique em um para voltar a editá-lo.</div>';
+        return;
+      }
+      visible.forEach((h) => {
+        const b = document.createElement('div');
+        b.className = 'thumb' + (h.id === state.currentId ? ' active' : '');
+        b.setAttribute('role', 'button');
+        b.innerHTML = `<img alt=""><div class="meta"><span></span><span></span></div><button class="del" data-tip="Remover do histórico"><svg class="i"><use href="#i-x"/></svg></button>`;
+        b.querySelector('img').src = h.thumb;
+        b.querySelector('.meta span').textContent = h.time.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        b.querySelector('.meta span:last-child').textContent = `${h.w}×${h.h}`;
+        b.onclick = () => openHistoryEntry(h);
+        b.querySelector('.del').onclick = async (e) => {
+          e.stopPropagation();
+          state.history = state.history.filter((x) => x !== h);
+          api?.history.delete(h.id);
+          if (h.id === state.currentId) {
+            if (state.history[0]) await openHistoryEntry(state.history[0]); else clearEditor();
+          }
+          renderHistory();
+        };
+        box.appendChild(b);
+      });
+    }
+
+    function clearEditor() {
+      state.base = null; state.shapes = []; state.currentId = null; state.selected = null; state.undo = []; state.redo = [];
+      $('#wrap').classList.remove('show'); $('#empty').style.display = ''; $('#dims').textContent = '';
+      $('#zoomControls').style.display = 'none';
+      updateUI();
+    }
+    $('#btnClearHistory').onclick = () => { state.history = []; $('#historySearch').value = ''; api?.history.clear(); clearEditor(); renderHistory(); };
+    $('#historySearch').addEventListener('input', renderHistory);
+
+    /* ================= Zoom ================= */
+    function fit() {
+      if (!state.base) return;
+      const st = $('#stage');
+      const fitWidth = (st.clientWidth - 56) / canvas.width;
+      const fitScale = Math.min(1, fitWidth, (st.clientHeight - 56) / canvas.height);
+      const s = state.zoom === 'fit' ? fitScale : state.zoom === 'custom' ? state.zoomPercent / 100 / devicePixelRatio : 1 / devicePixelRatio;
+      state.scale = s;
+      canvas.style.width = `${canvas.width * s}px`;
+      canvas.style.height = `${canvas.height * s}px`;
+      $('#wrap').style.margin = state.zoom === 'fit' ? 'auto' : '28px';
+      $('#zoomControls').style.display = '';
+      $('#zoomLevel').textContent = `${Math.max(1, Math.round(s * devicePixelRatio * 100))}%`;
+    }
+    window.addEventListener('resize', fit);
+    function changeZoom(direction) {
+      finishTextEdit();
+      const st = $('#stage');
+      const fitPercent = Math.min(1, (st.clientWidth - 56) / canvas.width, (st.clientHeight - 56) / canvas.height) * devicePixelRatio * 100;
+      const current = state.zoom === 'custom' ? state.zoomPercent : state.zoom === 'fit' ? fitPercent : 100;
+      state.zoomPercent = Math.max(10, Math.min(400, Math.round((current + direction * 25) / 25) * 25));
+      state.zoom = 'custom';
+      fit();
+    }
+    $('#zoomIn').onclick = () => changeZoom(1);
+    $('#zoomOut').onclick = () => changeZoom(-1);
+    $('#zoomFit').onclick = () => { state.zoom = 'fit'; fit(); };
+
+    /* ================= Estado dos botões ================= */
+    function updateUI() {
+      const has = !!state.base;
+      $('#btnUndo').disabled = !state.undo.length;
+      $('#btnRedo').disabled = !state.redo.length;
+      $('#btnDelete').disabled = !state.selected;
+      ['#btnCopy', '#btnSave', '#btnBug', '#btnOcr'].forEach((id) => ($(id).disabled = !has));
+    }
+
+    /* ================= Ações ================= */
+    function capture(mode) {
+      if (!api) { toast('A captura funciona dentro do programa instalado. Aqui, cole uma imagem com Ctrl+V.', 'err'); return; }
+      finishTextEdit();
+      closePalette();
+      if (mode === 'scroll') { openModal('#webUrlModal'); $('#webUrl').focus(); }
+      else if (mode === 'monitor-scroll') api.chooseDisplay('scroll');
+      else if (mode === 'all') api.capture('all');
+      else if (mode === 'full') api.chooseDisplay(mode);
+      else api.capture(mode);
+    }
+    async function copyImage() {
+      if (!state.base) return;
+      const url = exportDataUrl();
+      try {
+        if (api) await api.copyImage(url);
+        else { const blob = await (await fetch(url)).blob(); await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); }
+        toast('Print copiado — cole com Ctrl+V onde quiser');
+      } catch { toast('Não foi possível copiar a imagem', 'err'); }
+    }
+    async function saveImage() {
+      if (!state.base) return;
+      const url = exportDataUrl();
+      if (api) {
+        const p = await api.saveImage(url);
+        if (p) toast(`Salvo em ${p}`);
+      } else {
+        const a = document.createElement('a'); a.href = url; a.download = `PrintShot_${Date.now()}.png`; a.click();
+        toast('Imagem baixada');
+      }
+    }
+    async function copyText(t) {
+      if (api) await api.copyText(t); else await navigator.clipboard.writeText(t);
+    }
+
+    let ocrSuggestions = [];
+    async function runOcr() {
+      if (!state.base || !api) return;
+      finishTextEdit();
+      $('#ocrText').value = '';
+      $('#translatedText').value = '';
+      $('#copyTranslatedText').disabled = true;
+      $('#indexOcrText').checked = !!state.history.find((entry) => entry.id === state.currentId)?.ocrText;
+      $('#privacySuggestions').innerHTML = '<small>Reconhecendo texto e procurando dados que talvez você queira ocultar…</small>';
+      $('#applyRedactions').disabled = true;
+      $('#btnOcr').disabled = true;
+      openModal('#ocrModal');
+      try {
+        const result = await api.recognizeText(exportDataUrl());
+        $('#ocrText').value = result.text || '';
+        ocrSuggestions = result.suggestions || [];
+        if ($('#indexOcrText').checked) saveOcrIndex();
+        const list = $('#privacySuggestions'); list.replaceChildren();
+        if (!ocrSuggestions.length) list.innerHTML = '<small>Nenhum dado sensível provável foi encontrado. Você ainda pode revisar e copiar o texto reconhecido.</small>';
+        ocrSuggestions.forEach((suggestion, index) => {
+          const label = document.createElement('label'); label.className = 'suggestion';
+          const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = suggestion.defaultSelected !== false; checkbox.dataset.index = String(index);
+          const text = document.createElement('span'); text.textContent = `${suggestion.type} · ${suggestion.masked}`;
+          label.append(checkbox, text); list.appendChild(label);
+        });
+      } catch (err) {
+        $('#privacySuggestions').innerHTML = '<small>O OCR não pôde ser concluído. Verifique a conexão para baixar os modelos de idioma na primeira execução.</small>';
+        toast(err?.message || 'Falha no reconhecimento de texto.', 'err');
+      } finally {
+        $('#applyRedactions').disabled = false;
+        $('#btnOcr').disabled = !state.base;
+      }
+    }
+    $('#copyOcrText').onclick = async () => {
+      try { await copyText($('#ocrText').value); toast('Texto reconhecido copiado.'); }
+      catch { toast('Não foi possível copiar o texto.', 'err'); }
+    };
+    $('#translateOcrText').onclick = async () => {
+      const text = $('#ocrText').value.trim();
+      const source = $('#translationSource').value;
+      const target = $('#translationTarget').value;
+      if (!text) { toast('Reconheça ou digite o texto antes de traduzir.', 'err'); return; }
+      if (source === target) { toast('Escolha idiomas de origem e destino diferentes.', 'err'); return; }
+      const button = $('#translateOcrText');
+      button.disabled = true; button.textContent = 'Traduzindo…';
+      $('#translatedText').value = '';
+      try {
+        const result = await api.translateText(text, source, target);
+        $('#translatedText').value = result.text || '';
+        $('#copyTranslatedText').disabled = !result.text;
+        toast('Tradução concluída. Revise o resultado.');
+      } catch (err) { toast(err?.message || 'Não foi possível traduzir o texto.', 'err'); }
+      finally { button.disabled = false; button.textContent = 'Traduzir'; }
+    };
+    $('#copyTranslatedText').onclick = async () => {
+      try { await copyText($('#translatedText').value); toast('Tradução copiada.'); }
+      catch { toast('Não foi possível copiar a tradução.', 'err'); }
+    };
+    function saveOcrIndex() {
+      const entry = state.history.find((item) => item.id === state.currentId);
+      if (!entry) return;
+      entry.ocrText = $('#indexOcrText').checked ? $('#ocrText').value : '';
+      api?.history.update(entry.id, entry.shapes, entry.ocrText);
+      renderHistory();
+    }
+    $('#indexOcrText').onchange = saveOcrIndex;
+    let ocrSaveTimer = null;
+    $('#ocrText').addEventListener('input', () => {
+      if (!$('#indexOcrText').checked) return;
+      clearTimeout(ocrSaveTimer);
+      ocrSaveTimer = setTimeout(saveOcrIndex, 350);
+    });
+    $('#applyRedactions').onclick = () => {
+      const selected = $$('#privacySuggestions input[type="checkbox"]:checked')
+        .map((checkbox) => ocrSuggestions[Number(checkbox.dataset.index)])
+        .filter(Boolean);
+      if (!selected.length) { closeModals(); return; }
+      state.shapes.push(...selected.map((s) => ({ type: 'redact', x: s.x, y: s.y, w: s.w, h: s.h, lw: 2, color: '#000000' })));
+      state.selected = null;
+      commit(); render(); updateUI(); closeModals();
+      toast(`${selected.length} área${selected.length === 1 ? '' : 's'} ocultada${selected.length === 1 ? '' : 's'}.`);
+    };
+
+    $('#btnRegion').onclick = () => capture('region');
+    $('#btnFull').onclick = () => capture('full');
+    $('#btnAllDisplays').onclick = () => capture('all');
+    $('#btnMonitorScroll').onclick = () => capture('monitor-scroll');
+    $('#btnPage').onclick = () => capture('scroll');
+    $('#openWebPage').onclick = async () => {
+      const result = await api?.openWebPage($('#webUrl').value);
+      if (!result?.ok) { toast(result?.error || 'Informe uma URL válida.', 'err'); return; }
+      closeModals();
+      toast('Página aberta no PrintShot. Use o painel flutuante para iniciar a captura automática.');
+    };
+    $$('[data-action]').forEach((b) => (b.onclick = () => capture(b.dataset.action)));
+    $('#btnUndo').onclick = undo;
+    $('#btnRedo').onclick = redo;
+    $('#btnDelete').onclick = deleteSelected;
+    $('#btnCopy').onclick = copyImage;
+    $('#btnSave').onclick = saveImage;
+    $('#btnOcr').onclick = runOcr;
+
+    /* ================= Janelas ================= */
+    const openModal = (id) => { closePalette(); $(id).classList.add('open'); };
+    const closeModals = () => $$('.modal').forEach((m) => m.classList.remove('open'));
+    $$('[data-close]').forEach((b) => (b.onclick = closeModals));
+    $$('.modal').forEach((m) => m.addEventListener('mousedown', (e) => { if (e.target === m) closeModals(); }));
+
+    let selectedCaptureMode = 'full';
+    $('#confirmDisplay').onclick = () => {
+      const id = $('#displaySelect').value;
+      closeModals();
+      if (selectedCaptureMode === 'scroll') toast('Selecione a área do documento que deseja capturar.');
+      api?.selectDisplay(selectedCaptureMode, id);
+    };
+    if (api) api.onChooseDisplay((mode, displays) => {
+      selectedCaptureMode = mode;
+      const select = $('#displaySelect'); select.replaceChildren();
+      displays.forEach((d) => { const o = document.createElement('option'); o.value = d.id; o.textContent = `${d.label}${d.primary ? ' (principal)' : ''}`; select.append(o); });
+      const updateDisplayHelp = () => {
+        $('#displayHelp').textContent = mode === 'scroll'
+          ? 'Selecione o monitor; depois, arraste sobre a área do documento. Apenas esse recorte será capturado durante a rolagem.'
+          : 'A captura será feita na resolução original do monitor.';
+      };
+      select.onchange = updateDisplayHelp;
+      updateDisplayHelp();
+      openModal('#displayModal');
+    });
+
+    async function stitchScrollFrames(frames) {
+      const items = await Promise.all(frames.map((frame) => new Promise((resolve, reject) => {
+        const src = typeof frame === 'string' ? frame : frame.dataUrl;
+        const img = new Image(); img.onload = () => resolve({ img, frame }); img.onerror = reject; img.src = src;
+      })));
+      const images = items.map((item) => item.img);
+      const first = images[0];
+      const step = Math.round(first.naturalHeight * 0.8);
+      const hasPageOffsets = items.some(({ frame }) => typeof frame !== 'string' && frame.scrollY != null);
+      const offsets = [0];
+      const reduced = images.map((img) => {
+        const width = 160, height = Math.max(1, Math.round(img.naturalHeight * width / img.naturalWidth));
+        const sample = document.createElement('canvas'); sample.width = width; sample.height = height;
+        const sampleCtx = sample.getContext('2d', { willReadFrequently: true });
+        sampleCtx.drawImage(img, 0, 0, width, height);
+        return { width, height, data: sampleCtx.getImageData(0, 0, width, height).data };
+      });
+      function findOverlap(previous, current) {
+        const minShift = Math.round(previous.height * 0.55);
+        const maxShift = Math.min(previous.height - 12, Math.round(previous.height * 0.97));
+        let bestShift = Math.round(previous.height * 0.8), bestScore = Infinity;
+        for (let shift = minShift; shift <= maxShift; shift += 1) {
+          const overlap = Math.min(previous.height - shift, current.height);
+          let total = 0, samples = 0;
+          for (let y = 0; y < overlap; y += 4) {
+            for (let x = 0; x < previous.width; x += 4) {
+              const a = ((y + shift) * previous.width + x) * 4;
+              const b = (y * current.width + x) * 4;
+              const lumA = previous.data[a] * .299 + previous.data[a + 1] * .587 + previous.data[a + 2] * .114;
+              const lumB = current.data[b] * .299 + current.data[b + 1] * .587 + current.data[b + 2] * .114;
+              total += Math.abs(lumA - lumB); samples++;
+            }
+          }
+          const score = samples ? total / samples : Infinity;
+          if (score < bestScore) { bestScore = score; bestShift = shift; }
+        }
+        const exactScale = first.naturalHeight / reduced[0].height;
+        return (bestScore < 48 ? bestShift : Math.round(previous.height * .8)) * exactScale;
+      }
+      for (let i = 1; i < items.length; i++) {
+        const frame = items[i].frame;
+        if (typeof frame !== 'string' && frame.scrollY != null) {
+          offsets.push(Math.round(frame.scrollY * (items[i].img.naturalHeight / frame.viewportHeight)));
+        } else {
+          const delta = hasPageOffsets ? step : findOverlap(reduced[i - 1], reduced[i]);
+          offsets.push(offsets[i - 1] + delta);
+        }
+      }
+      const out = document.createElement('canvas');
+      const fullHeight = Math.max(...items.map((item, i) => offsets[i] + item.img.naturalHeight));
+      const outputScale = Math.min(1, 32000 / fullHeight, 32000 / first.naturalWidth);
+      out.width = Math.max(1, Math.round(first.naturalWidth * outputScale));
+      out.height = Math.max(1, Math.round(fullHeight * outputScale));
+      const c = out.getContext('2d');
+      c.scale(outputScale, outputScale);
+      items.forEach(({ img }, i) => c.drawImage(img, 0, offsets[i]));
+      if (outputScale < 1) toast('A página era muito alta; a imagem foi reduzida para caber no formato PNG.');
+      openImage(out.toDataURL('image/png'), { zoom: 'width' });
+    }
+    if (api) api.onScrollFrames((frames) => stitchScrollFrames(frames).catch(() => toast('Não foi possível unir os trechos capturados.', 'err')));
+
+    async function openCombinedDisplays({ width, height, frames }) {
+      const images = await Promise.all(frames.map((frame) => new Promise((resolve, reject) => {
+        const img = new Image(); img.onload = () => resolve({ img, frame }); img.onerror = reject; img.src = frame.dataUrl;
+      })));
+      const scale = Math.min(1, 32000 / width, 32000 / height);
+      const out = document.createElement('canvas');
+      out.width = Math.max(1, Math.round(width * scale)); out.height = Math.max(1, Math.round(height * scale));
+      const c = out.getContext('2d'); c.fillStyle = '#111214'; c.fillRect(0, 0, out.width, out.height);
+      images.forEach(({ img, frame }) => c.drawImage(img, frame.x * scale, frame.y * scale, frame.width * scale, frame.height * scale));
+      if (scale < 1) toast('A área combinada era muito grande; a imagem foi reduzida para caber no formato PNG.');
+      openImage(out.toDataURL('image/png'), { zoom: 'width' });
+    }
+    if (api) api.onMultiDisplayCapture((data) => openCombinedDisplays(data).catch(() => toast('Não foi possível combinar as imagens dos monitores.', 'err')));
+
+    let pendingMode = 'region';
+    function setModeSeg(m) { pendingMode = m; $$('#modeSeg button').forEach((b) => b.classList.toggle('active', b.dataset.mode === m)); }
+    $$('#modeSeg button').forEach((b) => (b.onclick = () => setModeSeg(b.dataset.mode)));
+
+    function showShortcut(s) {
+      const label = s.replace('CommandOrControl', 'Ctrl').replace(/\+/g, ' + ');
+      $('#shortcutLabel').textContent = label; $('#shortcutLabel2').textContent = label;
+    }
+    $('#btnSettings').onclick = async () => {
+      const s = api ? await api.getSettings() : { shortcut: 'PrintScreen', shortcutMode: 'region' };
+      $('#shortcutSelect').value = s.shortcut; setModeSeg(s.shortcutMode);
+      openModal('#settingsModal');
+    };
+    $('#saveSettings').onclick = async () => {
+      const next = { shortcut: $('#shortcutSelect').value, shortcutMode: pendingMode };
+      if (!api) { closeModals(); return; }
+      const res = await api.setSettings(next);
+      if (res.ok) { showShortcut(res.settings.shortcut); toast('Configurações salvas'); closeModals(); }
+      else toast('Esse atalho já está sendo usado por outro programa. Escolha outro.', 'err');
+    };
+
+    $('#btnBug').onclick = () => {
+      const steps = state.shapes.filter((s) => s.type === 'step');
+      $('#bugSteps').value = steps.length
+        ? steps.map((_, i) => `${i + 1}. `).join('\n')
+        : '1. \n2. \n3. ';
+      openModal('#bugModal');
+      setTimeout(() => $('#bugTitle').select());
+    };
+    $('#bugCopyImage').onclick = copyImage;
+    $('#bugCopyText').onclick = async () => {
+      const md = [
+        `### ${$('#bugTitle').value}`, '',
+        '**Passos para reproduzir**', $('#bugSteps').value, '',
+        `**Resultado esperado:** ${$('#bugExpected').value || '-'}`,
+        `**Resultado obtido:** ${$('#bugActual').value || '-'}`, '',
+        `_Registrado em ${new Date().toLocaleString('pt-BR')} com PrintShot Studio_`
+      ].join('\n');
+      await copyText(md);
+      toast('Relatório copiado — cole junto com a imagem');
+    };
+
+    /* ================= Teclado ================= */
+    const TOOL_KEYS = { v: 'select', n: 'step', a: 'arrow', r: 'rect', h: 'highlight', t: 'text', b: 'blur' };
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if ($('.modal.open')) { closeModals(); return; }
+        if ($('#palettePopover').classList.contains('open')) { closePalette(); return; }
+        if (state.selected) { state.selected = null; render(); updateUI(); }
+        return;
+      }
+      if (isTyping(e.target)) return;
+      const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+      if (mod && k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+      else if (mod && (k === 'y' || (k === 'z' && e.shiftKey))) { e.preventDefault(); redo(); }
+      else if (mod && k === 'c') { e.preventDefault(); copyImage(); }
+      else if (mod && k === 's') { e.preventDefault(); saveImage(); }
+      else if (mod && k === 'n') { e.preventDefault(); capture(e.shiftKey ? 'full' : 'region'); }
+      else if (!mod && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); deleteSelected(); }
+      else if (!mod && k === '0' && state.base) { $('#zoomFit').click(); }
+      else if (!mod && !e.altKey && TOOL_KEYS[k]) setTool(TOOL_KEYS[k]);
+      else if (!mod && state.selected && e.key.startsWith('Arrow')) {
+        e.preventDefault();
+        const st = (e.shiftKey ? 10 : 1) * unit();
+        const dx = e.key === 'ArrowLeft' ? -st : e.key === 'ArrowRight' ? st : 0;
+        const dy = e.key === 'ArrowUp' ? -st : e.key === 'ArrowDown' ? st : 0;
+        moveShape(state.selected, JSON.parse(JSON.stringify(state.selected)), dx, dy);
+        commit(); render();
+      }
+    });
+
+    /* ================= Colar e arrastar arquivos ================= */
+    function readFile(file) {
+      if (!file || !file.type.startsWith('image/')) return;
+      const r = new FileReader();
+      r.onload = (ev) => openImage(ev.target.result);
+      r.readAsDataURL(file);
+    }
+    window.addEventListener('paste', (e) => {
+      if (isTyping(e.target)) return;
+      const item = [...(e.clipboardData?.items || [])].find((i) => i.kind === 'file' && i.type.startsWith('image/'));
+      if (item) { readFile(item.getAsFile()); toast('Imagem colada'); }
+    });
+    let dragDepth = 0;
+    window.addEventListener('dragenter', (e) => { e.preventDefault(); dragDepth++; document.body.classList.add('dragover'); });
+    window.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dragover'); } });
+    window.addEventListener('dragover', (e) => e.preventDefault());
+    window.addEventListener('drop', (e) => {
+      e.preventDefault(); dragDepth = 0; document.body.classList.remove('dragover');
+      readFile(e.dataTransfer.files[0]);
+    });
+
+    /* ================= Início ================= */
+    buildPalette();
+    setTool('step');
+    if (api) {
+      api.onCapture((url) => openImage(url));
+      api.onCaptureError((msg) => toast(msg, 'err'));
+      api.getSettings().then((s) => showShortcut(s.shortcut));
+      api.history.list().then((entries) => {
+        const currentIds = new Set(state.history.map((entry) => entry.id));
+        const restored = entries.filter((entry) => !currentIds.has(entry.id)).map((entry) => ({
+          ...entry, src: null, time: new Date(entry.time || Date.now()), shapes: entry.shapes || '[]'
+        }));
+        state.history = [...state.history, ...restored].slice(0, 50);
+        renderHistory();
+      }).catch(() => toast('Não foi possível carregar o histórico salvo.', 'err'));
+    }
+  </script>
+</body>
+</html>

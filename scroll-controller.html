@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+  <title>Captura de página</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 20px 22px; color: #ececef; background: #17181c; font: 15px 'Segoe UI', sans-serif; }
+    h1 { margin: 0 0 10px; font-size: 20px; }
+    p { margin: 0 0 18px; color: #b7b8c0; line-height: 1.5; font-size: 15px; }
+    #status { color: #ff895f; font-weight: 600; margin-right: auto; }
+    footer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    button { border: 1px solid #42434a; border-radius: 7px; padding: 10px 15px; color: #eee; background: #25262b; font: inherit; cursor: pointer; }
+    button.primary { color: #17100d; background: #ff784b; border-color: #ff784b; font-weight: 600; }
+    button.cancel { margin-left: auto; }
+    button:disabled { opacity: .55; cursor: wait; }
+  </style>
+</head>
+<body>
+  <h1>Captura de conteúdo rolável</h1>
+  <p>A captura mantém o recorte que você selecionou sobre o documento. A rolagem e as capturas começam automaticamente dentro dessa área. Você pode pausar, usar <b id="shortcut">F9</b> para capturar um trecho ou pressionar F10 para finalizar.</p>
+  <footer><span id="status">Capturando primeiro trecho…</span><button id="pause" disabled>Pausar automático</button><button class="primary" id="add" disabled>Capturar trecho</button><button id="finish">Finalizar</button><button class="cancel" id="cancel">Cancelar</button></footer>
+  <script>
+    const status = document.getElementById('status');
+    const add = document.getElementById('add');
+    const pause = document.getElementById('pause');
+    window.printshot.scrollController.onInit(({ shortcut }) => {
+      document.getElementById('shortcut').textContent = shortcut;
+      add.disabled = false;
+      pause.disabled = false;
+      status.textContent = 'Iniciando rolagem automática…';
+    });
+    window.printshot.scrollController.onCount((count) => {
+      add.disabled = false;
+      status.textContent = `${count} trecho${count === 1 ? '' : 's'} capturado${count === 1 ? '' : 's'}`;
+    });
+    window.printshot.scrollController.onError((msg) => {
+      add.disabled = false;
+      status.textContent = msg;
+    });
+    window.printshot.scrollController.onInfo((msg) => { status.textContent = msg; });
+    window.printshot.scrollController.onState(({ paused }) => {
+      pause.textContent = paused ? 'Continuar automático' : 'Pausar automático';
+      if (paused) status.textContent = 'Pausado. Você também pode capturar um trecho manualmente.';
+    });
+    pause.onclick = () => window.printshot.scrollController.togglePause();
+    add.onclick = () => { add.disabled = true; status.textContent = 'Capturando trecho…'; window.printshot.scrollController.add(); };
+    document.getElementById('finish').onclick = () => window.printshot.scrollController.finish();
+    document.getElementById('cancel').onclick = () => window.printshot.scrollController.cancel();
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') window.printshot.scrollController.cancel();
+      if (event.key === 'Enter') window.printshot.scrollController.add();
+    });
+  </script>
+</body>
+</html>
